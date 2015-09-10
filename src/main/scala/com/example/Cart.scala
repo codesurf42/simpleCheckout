@@ -9,9 +9,40 @@ object Cart {
     println("Hello, world!")
   }
 
-  def getPrice(in: List[StockItem]): Int = in.foldLeft(0){(basketValue, item) =>
-    basketValue + stockPrices(item)
+  def getPrice(in: List[StockItem]): Int = {
+    // we could reduce it, but sooner or later we may need to print full receipt
+    val counted = in.groupBy(e => e).map(e => (e._1, e._2.size))
+    val afterPromos = promoOranges3F2(
+      promoApplesB1G1(counted))
+
+    // promotions based on quantity can be stacked up
+    afterPromos.foldLeft(0){(basketValue, entry) =>
+      basketValue + stockPrices(entry._1) * entry._2
+    }
   }
+
+  def promoApplesB1G1(original: Map[StockItem, Int]): Map[StockItem, Int] = {
+    val item = "Apple"
+    val newQntOpt = original.
+      get(item).
+      map(qnt => qnt / 2 + qnt % 2)
+    newQntOpt.fold(original){ v =>
+      original ++ Map(item -> v)
+    }
+  }
+
+  // they are quite generic, it would be simple to parametrize them by values
+  // delivered by some external system or database
+  def promoOranges3F2(original: Map[StockItem, Int]): Map[StockItem, Int] = {
+    val item = "Orange"
+    val newQntOpt = original.
+      get(item).
+      map(qnt => qnt / 3 * 2 + qnt % 3)
+    newQntOpt.fold(original){ v =>
+      original ++ Map(item -> v)
+    }
+  }
+
 
   // Later we realized we want more safety on item types.
   // It is a first phase of refactoring, so let's introduce a bit better type
@@ -21,7 +52,7 @@ object Cart {
    */
   case class SaferStockItem(itemName: String) {
     // that will be validated with our stock base
-    assert(stockPrices.contains(itemName))
+    assert(stockPrices.contains(itemName), "not a valid name for item")
 
     // stock elements may come from different systems, they are not hard-coded here,
     // sometimes we may even need to match similar items as a one
